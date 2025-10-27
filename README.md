@@ -2,7 +2,7 @@
 
 ## Description
 
-`KipuBank 0.2` is a smart contract that functions as a decentralized bank on the Ethereum network, allowing users to deposit and withdraw Ether (ETH). The contract enforces transaction limits and manages individual user balances.
+`KipuBank 0.2.0` is a smart contract that functions as a decentralized bank on the Ethereum network, allowing users to deposit and withdraw Ether (ETH). The contract enforces transaction limits and manages individual user balances.
 
 Key features include:
 
