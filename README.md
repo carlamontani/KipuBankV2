@@ -46,6 +46,7 @@ After deployment, you can interact with the contract's public functions using a 
 ### Deposit
 
 * **Via `Deposit()`**: Call the `Deposit` function and attach the amount of ETH you wish to send. This achieves the same result as the `receive` function.
+* Try `40000000000000000` 0.04 ether
 
 ### Withdrawal
 
