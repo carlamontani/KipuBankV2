@@ -16,6 +16,7 @@ Key features include:
 
 This contract has been deployed on the Sepolia testnet. You can view it and interact with it on Etherscan at the following address:
 [KipuBank on Sepolia](https://sepolia.etherscan.io/address/0x2d9ded90c8b42de78ae7955674f94b147212f9da) 🔗
+[KipuBank on Sepolia2](https://sepolia.etherscan.io/address/0x75575783b87c0b0584a5160eddd4ed01b112e17b)🔗
 
 ## Deployment Instructions
 
