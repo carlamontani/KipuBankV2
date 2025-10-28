@@ -1,0 +1,5 @@
+{
+  "devDependencies": {
+    "@chainlink/contracts": "^1.5.0"
+  }
+}
