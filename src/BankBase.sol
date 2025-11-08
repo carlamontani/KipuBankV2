@@ -2,7 +2,7 @@
 pragma solidity > 0.8.0;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IOracle} from "./IOracle.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 /**
  * @title BankBase
@@ -18,9 +18,9 @@ abstract contract BankBase is Ownable {
         uint256 totalUSD;
     }
 
-    /// @notice Oracle contract for fetching ETH/USD price feeds.
-    /// @dev Public oracle address that can be accessed by derived contracts.
-    IOracle public oracle;
+    /// @notice Chainlink price feed aggregator for ETH/USD.
+    /// @dev Public interface to interact with Chainlink's price oracle.
+    AggregatorV3Interface public priceFeed;
     
     /// @notice The maximum total amount of ETH the bank can store.
     /// @dev Set at deployment and cannot be changed (immutable).
@@ -90,19 +90,20 @@ abstract contract BankBase is Ownable {
         _;
     }
 
-    /// @notice Initializes the base contract with capacity limit and oracle.
+    /// @notice Initializes the base contract with capacity limit and price feed.
     /// @param _bankCap The maximum total amount of ETH the bank can hold.
-    /// @param _oracle The oracle contract for ETH price feeds.
-    constructor(uint256 _bankCap, IOracle _oracle) Ownable(msg.sender) {
+    /// @param _priceFeed The Chainlink price feed contract for ETH/USD.
+    constructor(uint256 _bankCap, AggregatorV3Interface _priceFeed) Ownable(msg.sender) {
         bankCap = _bankCap;
-        oracle = _oracle;
+        priceFeed = _priceFeed;
     }
 
-    /// @notice Fetches the current ETH price from the oracle.
-    /// @dev Internal function that queries the oracle contract.
+    /// @notice Fetches the current ETH price from the Chainlink oracle.
+    /// @dev Internal function that queries the price feed contract.
     /// @return The current ETH price in USD (scaled by 1e8).
     function _getETHPrice() internal view returns (int256) {
-        return oracle.latestAnswer();
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        return answer;
     }
 
     /// @notice Transfers ETH safely to a given address.
@@ -116,22 +117,45 @@ abstract contract BankBase is Ownable {
         return data;
     }
 
-    /// @notice Updates deposit-related counters.
+    /// @notice Internal deposit handler that validates bank capacity and updates all state.
     /// @param account The address of the depositor.
     /// @param amount The amount being deposited.
-    /// @dev Increments global and user-specific deposit counters.
-    function _updateDepositCounters(address account, uint256 amount) internal {
-        _depositCount[account]++;
-        totalDepositsCount++;
-        totalDepositsAmount += amount;
+    /// @dev Checks bank cap before updating balances and counters. Uses unchecked for safe increments.
+    /// Caches storage variable in memory to minimize state access.
+    function _handleDeposit(address account, uint256 amount) internal {
+        uint256 currentTotal = totalDepositsAmount;
+        
+        if (currentTotal + amount > bankCap)
+            revert BankCapacityExceeded(currentTotal, bankCap);
+        
+        uint256 userBalance = _balanceETH[account];
+        _balanceETH[account] = userBalance + amount;
+        
+        Balances storage userBalances = balance[account];
+        userBalances.eth += amount;
+        
+        int256 ethPrice = _getETHPrice();
+        if (ethPrice > 0) {
+            userBalances.totalUSD += (amount * uint256(ethPrice)) / 1e8;
+        }
+        
+        unchecked {
+            _depositCount[account]++;
+            totalDepositsCount++;
+            totalDepositsAmount = currentTotal + amount;
+        }
+        
+        emit MakeDeposit(account, amount);
     }
 
     /// @notice Updates withdrawal-related counters.
     /// @param account The address of the withdrawer.
-    /// @dev Increments global and user-specific withdrawal counters.
+    /// @dev Increments global and user-specific withdrawal counters using unchecked.
     function _updateWithdrawalCounters(address account) internal {
-        _withdrawalCount[account]++;
-        totalWithdrawalsCount++;
+        unchecked {
+            _withdrawalCount[account]++;
+            totalWithdrawalsCount++;
+        }
     }
 
     /// @notice Returns the current ETH price in USD from the oracle.
